@@ -1,0 +1,56 @@
+name: Publish digest preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane_marker:
+        description: Lane marker to include in the public preview; leave empty to remove it
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Render preview
+        env:
+          LANE_MARKER: ${{ inputs.lane_marker }}
+        run: |
+          printf 'LANE_MARKER=%s\n' "$LANE_MARKER" > .env
+          node --import tsx --env-file=.env scripts/render-preview.ts
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
