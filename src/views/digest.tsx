@@ -1,9 +1,10 @@
 import type { DigestRow } from '../digest/types.js';
 
-export function DigestPage({ night, rows }: { night: string; rows: DigestRow[] }) {
+export function DigestPage({ night, rows, malformedLines = 0 }: { night: string; rows: DigestRow[]; malformedLines?: number }) {
   return (
     <>
       <h1>morning digest · {night}</h1>
+      {malformedLines > 0 && <p class="warn">malformed lines: {malformedLines}</p>}
       {rows.length === 0 ? (
         <p class="mute">nothing ran</p>
       ) : (
@@ -22,7 +23,7 @@ export function DigestPage({ night, rows }: { night: string; rows: DigestRow[] }
           </thead>
           <tbody>
             {rows.map((row) => {
-              const warn = row.retries >= 3 || row.lastStatus === 'fail';
+              const warn = row.retries >= 3 || row.failRuns > 0;
               return (
                 <tr class={warn ? 'warn' : undefined}>
                   <td>{row.job}</td>

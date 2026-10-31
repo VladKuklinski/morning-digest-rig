@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DigestRow, RunStatus } from './types.js';
+import type { DigestRow, NightDigest, ReadNight, RunStatus } from './types.js';
 
 type RunEntry = {
   at: string;
@@ -22,9 +22,10 @@ function isRunEntry(value: unknown): value is RunEntry {
   );
 }
 
-export function readNight(runsDir: string, night: string): DigestRow[] {
+export function readNightWithStats(runsDir: string, night: string): NightDigest {
   const content = readFileSync(join(runsDir, `${night}.jsonl`), 'utf8');
   const jobs = new Map<string, DigestRow>();
+  let malformedLines = 0;
 
   for (const line of content.split(/\r?\n/)) {
     if (!line.trim()) continue;
@@ -32,9 +33,13 @@ export function readNight(runsDir: string, night: string): DigestRow[] {
     try {
       value = JSON.parse(line);
     } catch {
+      malformedLines += 1;
       continue;
     }
-    if (!isRunEntry(value)) continue;
+    if (!isRunEntry(value)) {
+      malformedLines += 1;
+      continue;
+    }
 
     const previous = jobs.get(value.job);
     if (!previous) {
@@ -43,6 +48,9 @@ export function readNight(runsDir: string, night: string): DigestRow[] {
         owner: value.owner,
         runs: 1,
         retries: value.status === 'retry' ? 1 : 0,
+        okRuns: value.status === 'ok' ? 1 : 0,
+        retryRuns: value.status === 'retry' ? 1 : 0,
+        failRuns: value.status === 'fail' ? 1 : 0,
         lastStatus: value.status,
         lastError: value.error ?? null,
         firstTime: value.at,
@@ -53,11 +61,16 @@ export function readNight(runsDir: string, night: string): DigestRow[] {
 
     previous.runs += 1;
     if (value.status === 'retry') previous.retries += 1;
+    if (value.status === 'ok') previous.okRuns += 1;
+    if (value.status === 'retry') previous.retryRuns += 1;
+    if (value.status === 'fail') previous.failRuns += 1;
     previous.lastStatus = value.status;
     previous.lastError = value.error ?? null;
     previous.lastTime = value.at;
     if (value.owner !== null) previous.owner = value.owner;
   }
 
-  return [...jobs.values()].sort((a, b) => a.job.localeCompare(b.job));
+  return { rows: [...jobs.values()].sort((a, b) => a.job.localeCompare(b.job)), malformedLines };
 }
+
+export const readNight: ReadNight = (runsDir, night) => readNightWithStats(runsDir, night).rows;

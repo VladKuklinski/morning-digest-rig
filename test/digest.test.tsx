@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { readNight } from '../src/digest/read-night.js';
+import { readNight, readNightWithStats } from '../src/digest/read-night.js';
 import { createApp } from '../src/app.js';
 
 const directories: string[] = [];
@@ -24,11 +24,25 @@ describe('readNight', () => {
     expect(rows).toHaveLength(5);
     expect(rows.map((row) => row.job)).toEqual([...rows.map((row) => row.job)].sort());
     expect(rows.find((row) => row.job === 'digest/render')?.owner).toBeNull();
+    expect(readNightWithStats('runs', '2026-10-28').malformedLines).toBe(1);
   });
 
   it('returns an empty list for an empty file', () => {
     const dir = makeRunsDir('');
     expect(readNight(dir, '2026-10-28')).toEqual([]);
+  });
+
+  it('counts structurally invalid JSONL records as malformed', () => {
+    const dir = makeRunsDir('{"at":"2026-10-28T01:00:00+01:00","job":"x","status":"unknown","owner":null}');
+    expect(readNightWithStats(dir, '2026-10-28').malformedLines).toBe(1);
+  });
+
+  it('retains a failure in counts after a later successful run', () => {
+    const dir = makeRunsDir([
+      '{"at":"2026-10-28T01:00:00+01:00","job":"recovering","status":"fail","owner":"a"}',
+      '{"at":"2026-10-28T02:00:00+01:00","job":"recovering","status":"ok","owner":"a"}',
+    ].join('\n'));
+    expect(readNight(dir, '2026-10-28')[0]).toMatchObject({ lastStatus: 'ok', failRuns: 1, okRuns: 1 });
   });
 });
 
