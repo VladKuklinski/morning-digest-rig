@@ -1,8 +1,9 @@
 ---
 plan: morning-digest
-status: ready
+status: done
 owner: rook
 opened: 2026-10-29
+closed: 2026-11-02
 ---
 
 # Morning digest
@@ -77,3 +78,18 @@ page again with `LANE_MARKER` unset (the banner reads "no marker set") and uploa
 link. Move this plan to `docs/plans/done/` with its issue list.
 
 Done when: the preview link no longer shows the lane marker.
+
+## Issues
+
+| # | Issue | Blocked by | Worker | Closed |
+|---|-------|------------|--------|--------|
+| 1 | Run log reader | — | codex harness · gpt-6 luna · low | 2026-10-31 |
+| 2 | Digest page | #1 | codex harness · gpt-6 luna · low | 2026-10-31 |
+| 3 | Digest JSON API | #1 | codex · gpt · high | 2026-10-31 |
+| 4 | Status-board digest links | #1 and #2 | codex harness · gpt-6 luna · low | 2026-10-31 |
+| 5 | Digest route tests | #2 and #3 | codex · gpt · high | 2026-10-31 |
+| 6 | Public HTML preview | #2, #3, #4 and #5 | codex harness | 2026-11-02 |
+| 7 | Remove preview marker and archive plan | #6 and reviewer approval | codex harness | 2026-11-02 |
+
+The reviewer saw the marked preview. The same GitHub Pages URL was redeployed with
+`LANE_MARKER` unset, and the page now reads “no marker set”.
